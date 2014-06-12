@@ -24,73 +24,77 @@ namespace CaptureScreenWithMouse
             {
                 graphics.CopyFromScreen(left, top, 0, 0, size);
 
-                var cursorInfo = CursorInfo.Create();
-                if (!GetCursorInfo(out cursorInfo))
+                using (var cursor = CursorInfo.Get())
                 {
-                    return bitmap;
-                }
+                    if (cursor.State != CursorState.Showing)
+                    {
+                        return bitmap;
+                    }
 
-                var cursorState = cursorInfo.cursorState;
-                if (cursorState != CursorState.Showing)
-                {
-                    return bitmap;
+                    using (var cursorIcon = cursor.GetIconInfo())
+                    {
+                        graphics.DrawIcon(
+                            cursor.Icon,
+                            cursor.ScreenPosition.X - cursorIcon.xHotspot - left,
+                            cursor.ScreenPosition.Y - cursorIcon.yHotspot - top
+                            );
+                    }
                 }
-
-                using (var cursorIconInfo = IconInfo.FromHIcon(cursorInfo.hCursor))
-                {
-                    graphics.DrawIcon(
-                        Icon.FromHandle(cursorInfo.hCursor),
-                        cursorInfo.ptScreenPos.X - cursorIconInfo.xHotspot - left,
-                        cursorInfo.ptScreenPos.Y - cursorIconInfo.yHotspot - top
-                        );
-                }
-
-                return bitmap;
             }
+            return bitmap;
         }
 
         #region Interop
 
-        [StructLayout(LayoutKind.Sequential)]
-        struct Point
+        public class CursorInfo : IDisposable
         {
-            public Int32 X;
-            public Int32 Y;
-        }
+            public CursorState State { get; private set; }
+            public Icon Icon { get; private set; }
+            public Point ScreenPosition { get; private set; }
 
-        [StructLayout(LayoutKind.Sequential)]
-        struct CursorInfo
-        {
-            /// <summary>
-            /// Specifies the size, in bytes, of the structure.
-            /// The caller must set this to Marshal.SizeOf(typeof(CursorInfo)).
-            /// </summary>
-            public Int32 cbSize;
-            public CursorState cursorState;
-            public IntPtr hCursor;          // Handle to the cursor. 
-            public Point ptScreenPos;       // A POINT structure that receives the screen coordinates of the cursor. 
-
-            public static CursorInfo Create()
+            private CursorInfo() { }
+            public static CursorInfo Get()
             {
-                var cursorInfo = new CursorInfo();
-                cursorInfo.cbSize = Marshal.SizeOf(typeof(CursorInfo));
-                return cursorInfo;
+                Native.CursorInfo info;
+                if (!Native.GetCursorInfo(out info))
+                {
+                    throw new Win32Exception();
+                }
+
+                var result = new CursorInfo();
+                result.State = info.cursorState;
+                result.Icon = Icon.FromHandle(info.hCursor);
+                result.ScreenPosition = new Point(info.ptScreenPos.X, info.ptScreenPos.Y);
+
+                return result;
+            }
+
+            public IconInfo GetIconInfo()
+            {
+                return IconInfo.FromIcon(this.Icon);
+            }
+
+            bool isDisposed = false;
+            public void Dispose()
+            {
+                if (!isDisposed)
+                {
+                    Icon.Dispose();
+                }
+                isDisposed = true;
             }
         }
 
-        enum CursorState
+        public enum CursorState
         {
             Hidden,
             Showing,
             Suppressed
         }
 
-        [DllImport("user32.dll")]
-        static extern bool GetCursorInfo(out CursorInfo cursorInfo);
-
-        class IconInfo : IDisposable
+        public class IconInfo : IDisposable
         {
-            private IconInfo(_IconInfo nativeIconInfo)
+            private IconInfo(Native.IconInfo nativeIconInfo)
             {
                 xHotspot = nativeIconInfo.xHotspot;
                 yHotspot = nativeIconInfo.yHotspot;
@@ -105,39 +109,25 @@ namespace CaptureScreenWithMouse
                 }
             }
 
-            [StructLayout(LayoutKind.Sequential)]
-            struct _IconInfo
-            {
-                /// <summary>
-                /// Specifies whether this structure defines an icon or a cursor.
-                /// true = icon, false = cursor
-                /// </summary>
-                public bool fIcon;
-                public Int32 xHotspot;
-                public Int32 yHotspot;
-                public IntPtr hbmMask;     // (HBITMAP) Specifies the icon bitmask bitmap. If this structure defines a black and white icon, 
-                // this bitmask is formatted so that the upper half is the icon AND bitmask and the lower half is 
-                // the icon XOR bitmask. Under this condition, the height should be an even multiple of two. If 
-                // this structure defines a color icon, this mask only defines the AND bitmask of the icon. 
-                public IntPtr hbmColor;    // (HBITMAP) Handle to the icon color bitmap. This member can be optional if this 
-                // structure defines a black and white icon. The AND bitmask of hbmMask is applied with the SRCAND 
-                // flag to the destination; subsequently, the color bitmap is applied (using XOR) to the 
-                // destination by using the SRCINVERT flag. 
-            }
-
             public int xHotspot { get; private set; }
             public int yHotspot { get; private set; }
             public bool IsCursor { get; private set; }
             public Bitmap Color { get; private set; }
             public Bitmap Mask { get; private set; }
 
-            [DllImport("user32.dll", SetLastError = true)]
-            static extern bool GetIconInfo(IntPtr hIcon, out _IconInfo iconInfo);
+            public static IconInfo FromIcon(Icon icon)
+            {
+                if (icon == null)
+                {
+                    throw new ArgumentNullException("icon");
+                }
+                return IconInfo.FromHIcon(icon.Handle);
+            }
 
             public static IconInfo FromHIcon(IntPtr hIcon)
             {
-                _IconInfo nativeIconInfo;
-                if (!GetIconInfo(hIcon, out nativeIconInfo))
+                Native.IconInfo nativeIconInfo;
+                if (!Native.GetIconInfo(hIcon, out nativeIconInfo))
                 {
                     throw new Win32Exception();
                 }
@@ -163,6 +153,61 @@ namespace CaptureScreenWithMouse
 
                 isDisposed = true;
             }
+        }
+
+        static class Native
+        {
+            [StructLayout(LayoutKind.Sequential)]
+            public struct Point
+            {
+                public Int32 X;
+                public Int32 Y;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct CursorInfo
+            {
+                /// <remarks>
+                /// The caller must set this to Marshal.SizeOf(typeof(CursorInfo)).
+                /// </remarks>
+                public Int32 cbSize;
+                public CursorState cursorState;
+                public IntPtr hCursor;
+                public Point ptScreenPos;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct IconInfo
+            {
+                /// <summary>
+                /// Specifies whether this structure defines an icon or a cursor.
+                /// true = icon, false = cursor
+                /// </summary>
+                public bool fIcon;
+                public Int32 xHotspot;
+                public Int32 yHotspot;
+                public IntPtr hbmMask;     // (HBITMAP) Specifies the icon bitmask bitmap. If this structure defines a black and white icon, 
+                // this bitmask is formatted so that the upper half is the icon AND bitmask and the lower half is 
+                // the icon XOR bitmask. Under this condition, the height should be an even multiple of two. If 
+                // this structure defines a color icon, this mask only defines the AND bitmask of the icon. 
+                public IntPtr hbmColor;    // (HBITMAP) Handle to the icon color bitmap. This member can be optional if this 
+                // structure defines a black and white icon. The AND bitmask of hbmMask is applied with the SRCAND 
+                // flag to the destination; subsequently, the color bitmap is applied (using XOR) to the 
+                // destination by using the SRCINVERT flag. 
+            }
+
+            public static bool GetCursorInfo(out CursorInfo cursorInfo)
+            {
+                cursorInfo.cbSize = Marshal.SizeOf(typeof(CursorInfo));
+                return GetCursorInfoNative(out cursorInfo);
+            }
+
+            [DllImport("user32.dll", SetLastError = true, EntryPoint = "GetCursorInfo")]
+            static extern bool GetCursorInfoNative(out CursorInfo cursorInfo);
+
+
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern bool GetIconInfo(IntPtr hIcon, out IconInfo iconInfo);
         }
 
         #endregion
