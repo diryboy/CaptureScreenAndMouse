@@ -71,5 +71,10 @@ namespace CaptureScreenWithMouse
                 e.Cancel = true;
             }
         }
+
+        private void MainForm_Deactivate(object sender, EventArgs e)
+        {
+            Hide();
+        }
     }
 }

@@ -43,7 +43,7 @@
             // 
             this.SysTrayIcon.ContextMenuStrip = this.TrayIconContextMenuStrip;
             this.SysTrayIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("SysTrayIcon.Icon")));
-            this.SysTrayIcon.Text = "Capture Config";
+            this.SysTrayIcon.Text = "Screen Capturer";
             this.SysTrayIcon.Visible = true;
             this.SysTrayIcon.MouseClick += new System.Windows.Forms.MouseEventHandler(this.SysTrayIcon_MouseClick);
             // 
@@ -101,6 +101,7 @@
             this.MinimizeBox = false;
             this.Name = "MainForm";
             this.Text = "Capture screen and cursor!";
+            this.Deactivate += new System.EventHandler(this.MainForm_Deactivate);
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.ConfigForm_FormClosing);
             this.SizeChanged += new System.EventHandler(this.ConfigForm_SizeChanged);
             this.TrayIconContextMenuStrip.ResumeLayout(false);
