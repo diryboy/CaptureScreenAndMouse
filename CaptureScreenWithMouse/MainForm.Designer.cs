@@ -36,6 +36,7 @@
             this.ToolStripMenuItem_Exit = new System.Windows.Forms.ToolStripMenuItem();
             this.Label_HotKeyTips = new System.Windows.Forms.Label();
             this.Label_Usage = new System.Windows.Forms.Label();
+            this.CheckBox_StartUpMinimized = new System.Windows.Forms.CheckBox();
             this.TrayIconContextMenuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -88,11 +89,23 @@
             this.Label_Usage.TabIndex = 1;
             this.Label_Usage.Text = resources.GetString("Label_Usage.Text");
             // 
+            // CheckBox_StartUpMinimized
+            // 
+            this.CheckBox_StartUpMinimized.AutoSize = true;
+            this.CheckBox_StartUpMinimized.Location = new System.Drawing.Point(133, 126);
+            this.CheckBox_StartUpMinimized.Name = "CheckBox_StartUpMinimized";
+            this.CheckBox_StartUpMinimized.Size = new System.Drawing.Size(159, 17);
+            this.CheckBox_StartUpMinimized.TabIndex = 2;
+            this.CheckBox_StartUpMinimized.Text = "Start up minimized next time.";
+            this.CheckBox_StartUpMinimized.UseVisualStyleBackColor = true;
+            this.CheckBox_StartUpMinimized.CheckedChanged += new System.EventHandler(this.CheckBox_StartUpMinimized_CheckedChanged);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(430, 126);
+            this.ClientSize = new System.Drawing.Size(430, 161);
+            this.Controls.Add(this.CheckBox_StartUpMinimized);
             this.Controls.Add(this.Label_Usage);
             this.Controls.Add(this.Label_HotKeyTips);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
@@ -103,7 +116,7 @@
             this.Text = "Capture screen and cursor!";
             this.Deactivate += new System.EventHandler(this.MainForm_Deactivate);
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.ConfigForm_FormClosing);
-            this.SizeChanged += new System.EventHandler(this.ConfigForm_SizeChanged);
+            this.Load += new System.EventHandler(this.MainForm_Load);
             this.TrayIconContextMenuStrip.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -118,6 +131,7 @@
         private System.Windows.Forms.ToolStripMenuItem ToolStripMenuItem_Toggle;
         private System.Windows.Forms.ToolStripMenuItem ToolStripMenuItem_Exit;
         private System.Windows.Forms.Label Label_Usage;
+        private System.Windows.Forms.CheckBox CheckBox_StartUpMinimized;
     }
 }
 

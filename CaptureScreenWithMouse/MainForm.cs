@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 
@@ -10,27 +11,40 @@ namespace CaptureScreenWithMouse
 {
     public partial class MainForm : Form
     {
+        const string StartUpMinimized = "StartUpMinimized";
+
         public MainForm()
         {
             InitializeComponent();
+            Opacity = 0;
+        }
 
+        private void MainForm_Load(object sender, EventArgs e)
+        {
             var hotkey = new HotKey(control: true, key: Keys.PrintScreen);
             hotkey.Pressed += Hotkey_Pressed;
             hotkey.Register(this);
+
+            BeginInvoke(new Action(() =>
+            {
+                if (File.Exists(StartUpMinimized))
+                {
+                    CheckBox_StartUpMinimized.Checked = true;
+                    Visible = false;
+                }
+                else
+                {
+                    Visible = true;
+                }
+
+                this.Opacity = 1;
+            }));
         }
 
         void Hotkey_Pressed(object sender, HandledEventArgs e)
         {
             var bitmap = ScreenCapturer.Capture();
             Clipboard.SetImage(bitmap);
-        }
-
-        private void ConfigForm_SizeChanged(object sender, EventArgs e)
-        {
-            if (ClientSize.IsEmpty)
-            {
-                Hide();
-            }
         }
 
         private void SysTrayIcon_MouseClick(object sender, MouseEventArgs e)
@@ -43,13 +57,19 @@ namespace CaptureScreenWithMouse
 
         private void ToggleShowHide()
         {
+            if ((DateTime.Now - TimeLastDeactivated).TotalMilliseconds < 500)
+            {
+                Visible = true;
+            }
+
+            Visible = !Visible;
             if (Visible)
             {
-                Hide();
+                WindowState = FormWindowState.Normal;
             }
             else
             {
-                Show();
+                WindowState = FormWindowState.Minimized;
             }
         }
 
@@ -67,14 +87,31 @@ namespace CaptureScreenWithMouse
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {
-                Hide();
+                Visible = false;
                 e.Cancel = true;
             }
         }
 
+        DateTime TimeLastDeactivated;
         private void MainForm_Deactivate(object sender, EventArgs e)
         {
-            Hide();
+            TimeLastDeactivated = DateTime.Now;
+            Visible = false;
+        }
+
+        private void CheckBox_StartUpMinimized_CheckedChanged(object sender, EventArgs e)
+        {
+            if (CheckBox_StartUpMinimized.Checked)
+            {
+                File.WriteAllText(StartUpMinimized, "");
+            }
+            else
+            {
+                if (File.Exists(StartUpMinimized))
+                {
+                    File.Delete(StartUpMinimized);
+                }
+            }
         }
     }
 }
