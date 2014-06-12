@@ -134,9 +134,6 @@ namespace CaptureScreenWithMouse
             [DllImport("user32.dll", SetLastError = true)]
             static extern bool GetIconInfo(IntPtr hIcon, out _IconInfo iconInfo);
 
-            [DllImport("gdi32.dll")]
-            static extern bool DeleteObject(IntPtr hObject);
-
             public static IconInfo FromHIcon(IntPtr hIcon)
             {
                 _IconInfo nativeIconInfo;
